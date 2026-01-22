@@ -34,6 +34,10 @@ resp_new.response_stages[0] = resp_sens.response_stages[0]
 # ObsPy makes this easy
 resp_new.recalculate_overall_sensitivity()
 
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Now that we have the response we want, let's create a new inventory from scratch,
+# then attach the new response
+
 #Medatdata
 lat = -77.6098
 lon = 163.1698
@@ -42,50 +46,104 @@ depth = 0.
 start_date = UTCDateTime("1990-01-01")
 end_date = UTCDateTime()
 
+desc = "Nanometrics TC120 Horizon seismometer"
+
 #Add Station name
-inv_new[0].code = "DV" #network
-inv_new[0].start_date = start_date
-inv_new[0].end_date = end_date
+#inv_new[0].code = "DV" #network
+#inv_new[0].start_date = start_date
+#inv_new[0].end_date = end_date
 
-inv_new[0][0].code = '01' #station
-inv_new[0][0]._total_number_of_channels = 3
-inv_new[0][0]._selected_number_of_channels = 3
+inv = Inventory(
+    # We'll add networks later.
+    networks=[],
+    # The source should be the id whoever create the file.
+    source="temporary deployment")
 
+net = Network(
+    # This is the network code according to the SEED standard.
+    code="DV",
+    # A list of stations. We'll add one later.
+    stations=[],
+    description="inventory for Dy Valleys",
+    # Start-and end dates are optional.
+    start_date=start_date)
 
-# inv_new[0][0]._latitude = -77.72 #latitude
-inv_new[0][0][0]._location_code = 'OL' #location
-#Need to add 2 more channels
-inv_new[0][0][0]._code ='HHZ' #channel code 
-HHN=Channel(code="HHN",
+sta = Station(
+    # This is the station code according to the SEED standard.
+    code="DV01",
+    latitude=lat,
+    longitude=lon,
+    elevation=elevation,
+    creation_date=UTCDateTime(),
+    site=Site(name="Polaris Site")
+    )
+
+# Channels
+cha=Channel(code="HHN",
             location_code='0L',
+            start_date = start_date,
             latitude=lat,
             longitude=lon,
             elevation=elevation,
-            depth=depth
+            depth=depth,
+            azimuth=0.0,
+            dip=0.0,
+            sample_rate=100.0,
+            sensor = Equipment(
+                description=desc,
             )
-
-HHE=Channel(code="HHE",
+            )
+cha.response = resp_new
+sta.channels.append(cha)
+# Next channel
+cha=Channel(code="HHE",
             location_code='0L',
+            start_date = start_date,
             latitude=lat,
             longitude=lon,
             elevation=elevation,
-            depth=depth
+            depth=depth,
+            azimuth=90.0,
+            dip=0.0,
+            sample_rate=100.0,
+            sensor = Equipment(
+                description=desc,
             )
+            )
+cha.response = resp_new
+sta.channels.append(cha)
+# Next channel
+cha=Channel(code="HHZ",
+            location_code='0L',
+            start_date = start_date,
+            latitude=lat,
+            longitude=lon,
+            elevation=elevation,
+            depth=depth,
+            azimuth=0.0,
+            dip=-90.0,
+            sample_rate=100.0,
+            sensor = Equipment(
+                description=desc,
+            )
+            )
+cha.response = resp_new
+sta.channels.append(cha)
 
-inv_new[0][0].channels.append(HHN)
-inv_new[0][0].channels.append(HHE)
+# Finish putting the inventory together
+net.stations.append(sta)
+inv.networks.append(net)
 
+# Write-out the staxml
+inv.write("polaris.xml", format="STATIONXML")
 
-
-# inv_new[0].stations[0].latitude = "-77.61"
-# inv_new[0].stations[0].longitude = "163.16"
-# inv_new[0].stations[0].elevation = "90" #elevation of Lake fryxellin meters
-
-# Write-out the new response
-print('new network stuff', inv_new)
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
-# Write-out stationXML
-
-# 2. Create a Network object and specify its stations list
-
-inv_new.write("polaris.xml", format="STATIONXML")
+# Test
+##sys.exit()
+st = read('DV_HHN.mseed')
+st.attach_response(inv)
+# Decon
+sr = st[0].stats.sampling_rate
+pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
+st.remove_response(pre_filt=pre_filt, output="VEL")
+st.plot()

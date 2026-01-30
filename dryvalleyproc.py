@@ -2,20 +2,20 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Jan  1 18:48:04 2026
-
+The code will output a mseed file with the response attached and a prefilter applied 
 @author: kitsellusted
 """
 
 from obspy import read, read_inventory, UTCDateTime
-import matplotlib.pyplot as plt
-import json
-from obspy.clients.nrl import NRL
+# import matplotlib.pyplot as plt
+# import json
+# from obspy.clients.nrl import NRL
 import sys
 
-# nrl = NRL()
 
-st=read('/Users/kitsellusted/Desktop/Dry_valley_data/*.mseed') #startign with just one trace
-# st = st.select(channel='!BKO')
+# Read in Dry valley deployment miniseed files
+st=read('/Users/kitsellusted/Desktop/Dry_valley_data/*.mseed') 
+
 
 # st=st.copy()
 
@@ -24,7 +24,7 @@ for tr in st:
     if len(tr)<=0:
         st.remove(tr)
 
-# st = st.remove(st[-1]) 
+
 #Trimminging to the Fryxell deployment timeline
 fryxell = st.trim(UTCDateTime("2025-11-21T01:00:00.000000Z"), 
                   UTCDateTime('2025-11-26T04:13:10.220000Z'))  
@@ -34,7 +34,7 @@ fryxell[0].stats.station = 'DV01'
 fryxell[1].stats.station = 'DV01'
 fryxell[2].stats.station = 'DV01'
 fryxell.remove(fryxell[-1]) #Get rid of the BKO channel
-print(fryxell)
+# print(fryxell)
 
 inv=read_inventory('/Users/kitsellusted/grad_school/VANDA_work/polaris_md/polaris.xml')
 
@@ -72,7 +72,7 @@ fryxell.detrend(type="demean") #centers the data around 0
 
 # # st_data.plot()
 
-fryxell.write("fryxell_deployment.mseed", format="MSEED")
+fryxell.write("fryxell_deployment.mseed", format="MSEED", encoding="float32")
 sys.exit()
 
 

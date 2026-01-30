@@ -139,9 +139,10 @@ inv.write("polaris.xml", format="STATIONXML")
 
 # -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 # Test
-##sys.exit()
-st = read('DV_HHN.mseed')
-st.attach_response(inv)
+#sys.exit()
+st = read('/Users/kitsellusted/grad_school/VANDA_work/DV_HHN.mseed')
+st[0].stats.station = 'DV01'
+st.attach_response(inv) #st station does match
 # Decon
 sr = st[0].stats.sampling_rate
 pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]

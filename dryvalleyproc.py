@@ -49,30 +49,10 @@ print('removing response')
 fryxell.remove_response(pre_filt=pre_filt, output="DISP")
 fryxell.detrend(type="linear") #removes upward/dwonward slope from data
 fryxell.detrend(type="demean") #centers the data around 0
-
-# st.plot()
-
-
+#applying bandpass filter
+fryxell.filter('bandpass', freqmin = 1, freqmax = 20)
 
 
-
-
-
-# #filter
-# st.filter('bandpass', freqmin=1, freqmax=2)
-
-# #
-# # st.plot()
-# start=UTCDateTime("2025-11-21T00:33:21.000000Z")
-# end=UTCDateTime('2025-11-21T23:45:54.920000Z ')
-# st_data=st.slice(starttime=start,endtime=end)
-# # print("bandpass between [1,5 Hz]")
-# st_data.plot(title='what is that')
-# plt.show()
-
-# # st_data.plot()
-
-fryxell.write("fryxell_deployment.mseed", format="MSEED", encoding="float32")
-sys.exit()
+fryxell.write("fryxell_deployment.mseed", format="MSEED")
 
 

@@ -3,7 +3,7 @@
   <Source>temporary deployment</Source>
   <Module>ObsPy 1.4.1</Module>
   <ModuleURI>https://www.obspy.org</ModuleURI>
-  <Created>2026-01-29T00:55:45.356825Z</Created>
+  <Created>2026-01-30T23:56:56.048292Z</Created>
   <Network code="DV" startDate="1990-01-01T00:00:00.000000Z">
     <Description>inventory for Dy Valleys</Description>
     <Station code="DV01">
@@ -13,7 +13,7 @@
       <Site>
         <Name>Polaris Site</Name>
       </Site>
-      <CreationDate>2026-01-29T00:55:45.356843Z</CreationDate>
+      <CreationDate>2026-01-30T23:56:56.048410Z</CreationDate>
       <Channel code="HHN" startDate="1990-01-01T00:00:00.000000Z" locationCode="0L">
         <Latitude unit="DEGREES">-77.6098</Latitude>
         <Longitude unit="DEGREES">163.1698</Longitude>

@@ -6,53 +6,34 @@ The code will output a mseed file with the response attached and a prefilter app
 @author: kitsellusted
 """
 
-from obspy import read, read_inventory, UTCDateTime
+from obspy import *
 # import matplotlib.pyplot as plt
 # import json
 # from obspy.clients.nrl import NRL
+import numpy as np
 import sys
 
 
 # Read in Dry valley deployment miniseed files
-st=read('/Users/kitsellusted/Desktop/Dry_valley_data/*.mseed') 
+st=read('fryxell_deployment.mseed') 
+fr = st.copy()
+fr.filter('bandpass', freqmin=1, freqmax=10)
+start = UTCDateTime('2025-11-21T09:31:00')
+end = UTCDateTime('2025-11-21T09:32:00')
 
+fr.slice(starttime=start, endtime=end)
+
+for tr in fr.slice(starttime=start, endtime=end):
+    idx = np.argmax(np.abs(tr.data))
+    max_time = tr.times("utcdatetime")[idx]
+    max_val = tr.data[idx]
+    print(tr.stats.channel, tr.data.max(), max_time)
 
 # st=st.copy()
 
 #Remove the 0 value streams from the 2017 deployment
-for tr in st:  
-    if len(tr)<=0:
-        st.remove(tr)
 
 
 #Trimminging to the Fryxell deployment timeline
-fryxell = st.trim(UTCDateTime("2025-11-21T01:00:00.000000Z"), 
-                  UTCDateTime('2025-11-26T04:13:10.220000Z'))  
-fryxell.merge()
-#Changing the station name to match the inventory object
-fryxell[0].stats.station = 'DV01' 
-fryxell[1].stats.station = 'DV01'
-fryxell[2].stats.station = 'DV01'
-fryxell.remove(fryxell[-1]) #Get rid of the BKO channel
-# print(fryxell)
-
-inv=read_inventory('/Users/kitsellusted/grad_school/VANDA_work/polaris_md/polaris.xml')
-
-# Attach Responsefor Dry Valley set-up
-# Digi= Guralp Minimus Plus, Sensor = Nanometrics TCH120
-print('attaching response')
-fryxell.attach_response(inv) 
-# Decon
-sr = fryxell[0].stats.sampling_rate
-pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
-print('removing response')
-fryxell.remove_response(pre_filt=pre_filt, output="DISP")
-fryxell.detrend(type="linear") #removes upward/dwonward slope from data
-fryxell.detrend(type="demean") #centers the data around 0
-#applying bandpass filter
-fryxell.filter('bandpass', freqmin = 1, freqmax = 20)
-
-
-fryxell.write("fryxell_deployment.mseed", format="MSEED")
 
 

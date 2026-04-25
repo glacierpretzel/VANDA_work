@@ -106,6 +106,8 @@ if plot ==True:
     
     # Plot the waveform
     st[0].taper(0.01)
+    start = st[0].stats.starttime
+    time = np.range(start, start+60*60, len(st[0].data))
     ax.plot(st[0].times("matplotlib"), st[0].data, "k-", label = st[0].stats.channel)
     
     # Plot the triggers
@@ -121,7 +123,7 @@ if plot ==True:
     
     # Labels and such
     ax.set_ylabel('Displacement nm')
-    ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%M-%d'))
+    ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
     ax.legend()
     tfmt = mdates.DateFormatter('%H:%M')
     ax.xaxis.set_major_formatter(tfmt)
@@ -132,6 +134,8 @@ if plot ==True:
     ax.title.set_text('VNDA Signals')
     plt.show()
 
+    
+    
 
 
 # Save results to text file

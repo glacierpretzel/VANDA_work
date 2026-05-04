@@ -10,6 +10,7 @@ from obspy.geodetics.base import gps2dist_azimuth
 from obspy.geodetics.base import kilometer2degrees
 from scipy.signal.windows import hann
 import pandas as pd
+import numpy as np
 
 def create_parser():
     parser = argparse.ArgumentParser(description="Use Obspy to plot waveforms.")
@@ -43,7 +44,7 @@ date2 = UTCDateTime(args.date2)
 # client = Client(base_url='http://10.30.5.28:8080',
 #                 debug=True, user='ken', password='grayling')
 
-client2 = Client('IRIS')
+client2 = Client('EARTHSCOPE')
 
 # Get data
 try:
@@ -107,7 +108,7 @@ if plot ==True:
     # Plot the waveform
     st[0].taper(0.01)
     start = st[0].stats.starttime
-    time = np.range(start, start+60*60, len(st[0].data))
+    #time = np.range(start, start+60*60, len(st[0].data))
     ax.plot(st[0].times("matplotlib"), st[0].data, "k-", label = st[0].stats.channel)
     
     # Plot the triggers

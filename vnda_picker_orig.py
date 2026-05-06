@@ -44,7 +44,7 @@ date2 = UTCDateTime(args.date2)
 # client = Client(base_url='http://10.30.5.28:8080',
 #                 debug=True, user='ken', password='grayling')
 
-client2 = Client('EARTHSCOPE')
+client2 = Client('IRIS')
 
 # Get data
 try:
@@ -63,11 +63,13 @@ except:
 
 # Preprocessing
 sr = st[0].stats.sampling_rate
+
 pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
 st.remove_response(output = 'DISP', pre_filt = pre_filt)
 st.merge(fill_value = 'interpolate')
 st.detrend(type="linear")
 st.detrend(type="demean")
+st[0].taper(0.05)
 st.filter("bandpass", freqmin=2, freqmax=10)
 
 # Set-up triggers

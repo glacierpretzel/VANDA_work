@@ -31,7 +31,7 @@ def create_parser():
 
 #----------------------------------------------------
 # Picker thresholds - these will need to be tweaked:
-trigger_on = 5
+trigger_on = 4.8 # looks like the happy spot
 trigger_off = 1.0
 #----------------------------------------------------
 
@@ -49,10 +49,10 @@ client = Client(base_url='http://10.30.5.28:8080',
 # Get data
 try:
     st = client.get_waveforms(
-        station='I54H1',
+        station='I54H2',
         network='*',
         location='*',
-        channel='*',
+        channel='BDF',
         starttime=date1,
         endtime=date2,
         attach_response=True
@@ -68,7 +68,7 @@ st.remove_response(output = 'DISP', pre_filt = pre_filt)
 st.merge(fill_value = 'interpolate')
 st.detrend(type="linear")
 st.detrend(type="demean")
-st.filter("bandpass", freqmin=2, freqmax=10)
+st.filter("bandpass", freqmin=1, freqmax=10)
 
 # Set-up triggers
 sr = st[0].stats.sampling_rate
@@ -132,7 +132,7 @@ if plot ==True:
     # Turn on a grids
     ax.grid(True, 'both')     
     # Title
-    ax.title.set_text('VNDA Signals')
+    ax.title.set_text('I54H2 Signals')
     plt.show()
 
     

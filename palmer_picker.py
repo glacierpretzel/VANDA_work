@@ -68,7 +68,8 @@ st.remove_response(output = 'DISP', pre_filt = pre_filt)
 st.merge(fill_value = 'interpolate')
 st.detrend(type="linear")
 st.detrend(type="demean")
-st.filter("bandpass", freqmin=1, freqmax=10)
+st[0].taper(0.05)
+st.filter("bandpass", freqmin=1, freqmax=8)
 
 # Set-up triggers
 sr = st[0].stats.sampling_rate
@@ -123,7 +124,7 @@ if plot ==True:
         k = k + 1
     
     # Labels and such
-    ax.set_ylabel('Displacement nm')
+    ax.set_ylabel('Displacement m')
     ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
     ax.legend()
     tfmt = mdates.DateFormatter('%H:%M')
@@ -140,11 +141,11 @@ if plot ==True:
 
 
 # Save results to text file
-s1 = date1.strftime('%Y-%M-%dT%H-%m')
-s2 = date2.strftime('%Y-%M-%dT%H-%m')
-nme = 'onset_times' + '_' + s1 + '_' + s2 + '.txt'
-with open(nme, "w") as file:
-    for time in trig_times:
-        file.write(str(time) + "\n")
+#s1 = date1.strftime('%Y-%M-%dT%H-%m')
+#s2 = date2.strftime('%Y-%M-%dT%H-%m')
+#nme = 'onset_times' + '_' + s1 + '_' + s2 + '.txt'
+#with open(nme, "w") as file:
+    #for time in trig_times:
+        #file.write(str(time) + "\n")
 
 

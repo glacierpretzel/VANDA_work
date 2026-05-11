@@ -83,6 +83,7 @@ nlta = int(3 * sr)    # Long-term window: 3 seconds
 cft = classic_sta_lta(st[0].data, nsta, nlta)
 
 # Identify trigger onsets and offsets as sample indices
+
 triggers = trigger_onset(cft, trigger_on, trigger_off)
 
 try:
@@ -96,12 +97,27 @@ except:
 
 trig_times = []
 onset_times = []
+peak_amps = []
+sliced_wvf = []
 for trigger in triggers:
     onset = st[0].stats.starttime + trigger[0] / sr
     offset = st[0].stats.starttime + trigger[1] / sr
-
-    trig_times.append([onset, offset])
-
+    #slicing the waveform on the onset and offset trigger times. This will be useful for template matching. 
+    sliced = st[0].slice(onset,offset)
+    if len(sliced)>0:
+        #Filtering by max amplitude. 
+        max_amp = max(abs(sliced.data))
+        
+        if max_amp>0.5E-9:
+            trig_times.append([onset, offset])
+            peak_amps.append(max_amp)
+            
+            sliced_wvf.append(st[0].slice(onset-20,offset+30))
+            if max_amp > 1.5E-8:
+                print(f'Thats a big one!')
+        else: 
+            #print(f'max amp too small, {max_amp}')
+            pass
 # Plot the results ------------------------------
 plot = False
 if plot ==True:
@@ -125,10 +141,11 @@ if plot ==True:
         k = k + 1
     
     # Labels and such
-    ax.set_ylabel('Displacement nm')
+    ax.set_ylabel('Displacement m')
     ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
     ax.legend()
-    tfmt = mdates.DateFormatter('%H:%M')
+    tfmt = mdates.DateFormatter('%H:%M:%S')
+    fig.autofmt_xdate(rotation=45)
     ax.xaxis.set_major_formatter(tfmt)
     ax.xaxis_date()
     # Turn on a grids
@@ -142,11 +159,11 @@ if plot ==True:
 
 
 # Save results to text file
-s1 = date1.strftime('%Y-%M-%dT%H-%m')
-s2 = date2.strftime('%Y-%M-%dT%H-%m')
-nme = 'onset_times' + '_' + s1 + '_' + s2 + '.txt'
-with open(nme, "w") as file:
-    for time in trig_times:
-        file.write(str(time) + "\n")
+#s1 = date1.strftime('%Y-%M-%dT%H-%m')
+#s2 = date2.strftime('%Y-%M-%dT%H-%m')
+#nme = 'onset_times' + '_' + s1 + '_' + s2 + '.txt'
+#with open(nme, "w") as file:
+    #for time in trig_times:
+        #file.write(str(time) + "\n")
 
 

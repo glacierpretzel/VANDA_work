@@ -113,13 +113,13 @@ for trigger in triggers:
             peak_amps.append(max_amp)
             
             sliced_wvf.append(st[0].slice(onset-20,offset+30))
-            if max_amp > 1.5E-8:
+            if max_amp > 1.4E-8:
                 print(f'Thats a big one!')
         else: 
             #print(f'max amp too small, {max_amp}')
             pass
 # Plot the results ------------------------------
-plot = False
+plot = True
 if plot ==True:
     fig, ax = plt.subplots(1)
     

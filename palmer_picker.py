@@ -62,78 +62,122 @@ except:
     sys.exit()
 
 # Preprocessing
-sr = st[0].stats.sampling_rate
-pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
-st.remove_response(output = 'DISP', pre_filt = pre_filt)
-st.merge(fill_value = 'interpolate')
-st.detrend(type="linear")
-st.detrend(type="demean")
-st[0].taper(0.05)
-st.filter("bandpass", freqmin=1, freqmax=8)
+st1 = Stream()
+bold_trigs = []
+for trace in st:
 
-# Set-up triggers
-sr = st[0].stats.sampling_rate
+    sr = trace.stats.sampling_rate
+    pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
+    trace.remove_response(output = 'DISP', pre_filt = pre_filt)
+    trace.taper(0.05)
+    # Define STA and LTA window lengths (in samples)
+    nsta = int(0.5 * sr)  # Short-term window: 0.5 seconds
+    nlta = int(3 * sr)    # Long-term window: 3 seconds
 
-# Define STA and LTA window lengths (in samples)
-nsta = int(0.5 * sr)  # Short-term window: 0.5 seconds
-nlta = int(3 * sr)    # Long-term window: 3 seconds
+    # Calculate the STA/LTA characteristic function
+    cft = classic_sta_lta(st[0].data, nsta, nlta)
 
-# Calculate the STA/LTA characteristic function
-cft = classic_sta_lta(st[0].data, nsta, nlta)
+    # Identify trigger onsets and offsets as sample indices
+    triggers = trigger_onset(cft, trigger_on, trigger_off)
+    bold_trigs.append(triggers)
+    trace.filter("bandpass", freqmin=1, freqmax=8)
+    st1.append(trace)
+st1.merge(fill_value = 'interpolate')
 
-# Identify trigger onsets and offsets as sample indices
-triggers = trigger_onset(cft, trigger_on, trigger_off)
+st1.detrend(type="linear")
+st1.detrend(type="demean")
 
-try:
+#try:
     # Find events
-    cat = client2.get_events(starttime = date1, endtime = date2,  minmagnitude = 6, maxmagnitude = 9)
-except:
-    print('No earthquakes for this time period.')
-    cat = 0
+    #cat = client2.get_events(starttime = date1, endtime = date2,  minmagnitude = 3, maxmagnitude = 9)
+#except:
+    #print('No earthquakes for this time period.')
+    #cat = 0
     
 # Print trigger times in UTCDateTime format
+#Palmer triggers
+all_trigs = []
 
-trig_times = []
-onset_times = []
-for trigger in triggers:
-    onset = st[0].stats.starttime + trigger[0] / sr
-    offset = st[0].stats.starttime + trigger[1] / sr
-
-    trig_times.append([onset, offset])
-
+for trace in st1:
+    print(trace)
+    trig_times = []
+    onset_times = []
+    sliced_wvf = []
+    for array in bold_trigs:
+        for trigger in array:
+            onset = trace.stats.starttime + trigger[0] / sr
+            offset = trace.stats.starttime + trigger[1] / sr
+            #slicing the waveform on the onset and offset trigger times. This will be useful for template matching. 
+            sliced = st[0].slice(onset,offset)
+            if len(sliced)>0:
+                #Filtering by max amplitude. 
+                max_amp = max(abs(sliced.data))
+                
+                if max_amp>0.5E-9:
+                    trig_times.append([onset, offset])
+                    #peak_amps.append(max_amp)
+                    
+                    sliced_wvf.append(st[0].slice(onset-20,offset+30))
+                    if max_amp > 1.5E-8:
+                        pass
+                        #print(f'Thats a big one!')
+                else: 
+                    #print(f'max amp too small, {max_amp}')
+                    pass
+        all_trigs.append(trig_times)
+#i54_trigs = all_trigs[0]
+#pmsa_trigs = all_trigs[1]
 # Plot the results ------------------------------
-plot = True
+plot = False
 if plot ==True:
-    fig, ax = plt.subplots(1)
+    fig, ax = plt.subplots(2, layout = 'constrained')
     
     # Plot the waveform
-    st[0].taper(0.01)
+    #st[0].taper(0.01)
     start = st[0].stats.starttime
     #time = np.range(start, start+60*60, len(st[0].data))
-    ax.plot(st[0].times("matplotlib"), st[0].data, "k-", label = st[0].stats.channel)
+    ax[0].plot(st1[0].times("matplotlib"), st[0].data, "k-", label = st[0].stats.channel)
+    ax[1].plot(st1[1].times("matplotlib"), st[1].data, "k-", label = st[1].stats.channel)
     
     # Plot the triggers
     k = 0
-    for t in trig_times:
+    for t in i54_trigs:
         t1 = mdates.date2num(t[0].datetime)
         t2 = mdates.date2num(t[1].datetime)
         if k == 0:
-            ax.axvspan(t1, t2, color="red", alpha=0.3, label="Trigger")
+            ax[0].axvspan(t1, t2, color="red", alpha=0.3, label="Trigger")
         else:
-            ax.axvspan(t1, t2, color="red", alpha=0.3)
+            ax[0].axvspan(t1, t2, color="red", alpha=0.3)
         k = k + 1
     
+    c = 0
+    for t in pmsa_trigs:
+        t1 = mdates.date2num(t[0].datetime)
+        t2 = mdates.date2num(t[1].datetime)
+        if k == 0:
+            ax[1].axvspan(t1, t2, color="red", alpha=0.3, label="Trigger")
+        else:
+            ax[1].axvspan(t1, t2, color="red", alpha=0.3)
+        c = c + 1
+        
     # Labels and such
-    ax.set_ylabel('Displacement m')
-    ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
-    ax.legend()
-    tfmt = mdates.DateFormatter('%H:%M')
-    ax.xaxis.set_major_formatter(tfmt)
-    ax.xaxis_date()
+    ax[0].set_ylabel('Displacement m')
+    ax[1].set_ylabel('Displacement m')
+    ax[0].set(xlabel = None)
+    ax[1].set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
+    ax[1].legend()
+    tfmt = mdates.DateFormatter('%H:%M:%S')
+    ax[1].xaxis.set_major_formatter(tfmt)
+    ax[1].xaxis_date()
     # Turn on a grids
-    ax.grid(True, 'both')     
+    #fig.set_grid(True, 'both')     
     # Title
-    ax.title.set_text('I54H2 Signals')
+    ax[0].title.set_text('I54H2 Signals')
+    ax[1].title.set_text('PMSA Signals')
+    fig.autofmt_xdate(rotation=45)
+    
+
+    
     plt.show()
 
     

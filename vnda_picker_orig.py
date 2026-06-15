@@ -41,8 +41,8 @@ date1 = UTCDateTime(args.date1)
 date2 = UTCDateTime(args.date2)
 
 # Attach to client
-# client = Client(base_url='http://10.30.5.28:8080',
-#                 debug=True, user='ken', password='grayling')
+client = Client(base_url='http://10.30.5.28:8080',
+                 debug=True, user='ken', password='grayling')
 
 client2 = Client('IRIS')
 
@@ -65,11 +65,11 @@ except:
 sr = st[0].stats.sampling_rate
 
 pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
-st.remove_response(output = 'DISP', pre_filt = pre_filt)
+st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=True)
 st.merge(fill_value = 'interpolate')
 st.detrend(type="linear")
 st.detrend(type="demean")
-st[0].taper(0.05)
+st[0].taper(0.01)
 st.filter("bandpass", freqmin=2, freqmax=10)
 
 # Set-up triggers
@@ -88,7 +88,7 @@ triggers = trigger_onset(cft, trigger_on, trigger_off)
 
 try:
     # Find events
-    cat = client2.get_events(starttime = date1, endtime = date2,  minmagnitude = 6, maxmagnitude = 9)
+    cat = client.get_events(starttime = date1, endtime = date2,  minmagnitude = 5, maxmagnitude = 9) #I don't think this is actually working. 
 except:
     print('No earthquakes for this time period.')
     cat = 0
@@ -99,20 +99,24 @@ trig_times = []
 onset_times = []
 peak_amps = []
 sliced_wvf = []
+
 for trigger in triggers:
     onset = st[0].stats.starttime + trigger[0] / sr
     offset = st[0].stats.starttime + trigger[1] / sr
     #slicing the waveform on the onset and offset trigger times. This will be useful for template matching. 
     sliced = st[0].slice(onset,offset)
+    
     if len(sliced)>0:
         #Filtering by max amplitude. 
         max_amp = max(abs(sliced.data))
         
-        if max_amp>0.5E-9:
+        if max_amp>1E-9:
             trig_times.append([onset, offset])
             peak_amps.append(max_amp)
             
-            sliced_wvf.append(st[0].slice(onset-20,offset+30))
+                #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
+            sliced_wvf.append(st[0].slice(onset-5,offset+20))
+            
             if max_amp > 1.4E-8:
                 print(f'Thats a big one!')
         else: 

@@ -65,11 +65,11 @@ except:
 sr = st[0].stats.sampling_rate
 
 pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
-st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=False)
+st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=True)
 st.merge(fill_value = 'interpolate')
 st.detrend(type="linear")
 st.detrend(type="demean")
-#st[0].taper(0.01)
+st[0].taper(0.01)
 st.filter("bandpass", freqmin=2, freqmax=8)
 
 # Set-up triggers
@@ -114,14 +114,14 @@ for trigger in triggers:
             trig_times.append([onset, offset])
             peak_amps.append(max_amp)
             
-                #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
+            #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
             sliced_wvf.append(st[0].slice(onset-1,offset+10))
             
         else: 
             #print(f'max amp too small, {max_amp}')
             pass
 # Plot the results ------------------------------
-plot = Fals
+plot = True
 if plot ==True:
     fig, ax = plt.subplots(1)
     

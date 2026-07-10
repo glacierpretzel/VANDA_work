@@ -41,8 +41,7 @@ date1 = UTCDateTime(args.date1)
 date2 = UTCDateTime(args.date2)
 
 # Attach to client
-client = Client(base_url='http://10.30.5.28:8080',
-                 debug=True, user='ken', password='grayling')
+#client = Client(base_url='http://10.30.5.28:8080', debug=True, user='ken', password='grayling')
 
 client2 = Client('IRIS')
 
@@ -52,7 +51,7 @@ try:
         station='VNDA',
         network='*',
         location='*',
-        channel='BHZ',
+        channel='BHN',
         starttime=date1,
         endtime=date2,
         attach_response=True
@@ -65,11 +64,12 @@ except:
 sr = st[0].stats.sampling_rate
 
 pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
-st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=True)
+st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=False)
 st.merge(fill_value = 'interpolate')
 st.detrend(type="linear")
 st.detrend(type="demean")
-st[0].taper(0.01)
+#st.normalize()
+#st[0].taper(0.01)
 st.filter("bandpass", freqmin=2, freqmax=10)
 
 # Set-up triggers
@@ -86,14 +86,13 @@ cft = classic_sta_lta(st[0].data, nsta, nlta)
 
 triggers = trigger_onset(cft, trigger_on, trigger_off)
 
-try:
+#try:
     # Find events
-    cat = client.get_events(starttime = date1, endtime = date2,  minmagnitude = 5, maxmagnitude = 9) #I don't think this is actually working. 
-except:
-    print('No earthquakes for this time period.')
-    cat = 0
-    
-# Print trigger times in UTCDateTime format
+    #cat = client.get_events(starttime = date1, endtime = date2,  minmagnitude = 5, maxmagnitude = 9) #I don't think this is actually working. 
+#except:
+    #print('No earthquakes for this time period.')
+    #cat = 0
+
 
 trig_times = []
 onset_times = []
@@ -109,13 +108,15 @@ for trigger in triggers:
     if len(sliced)>0:
         #Filtering by max amplitude. 
         max_amp = max(abs(sliced.data))
-        
+        #print(max_amp)
         if max_amp>1E-9:
             trig_times.append([onset, offset])
             peak_amps.append(max_amp)
             
-                #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
-            sliced_wvf.append(st[0].slice(onset-5,offset+20))
+            #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
+            slc = st[0].slice(onset-5,offset+20)
+            #slc = slc.normalize()
+            sliced_wvf.append(slc)
             
             if max_amp > 1.4E-8:
                 print(f'Thats a big one!')
@@ -145,7 +146,7 @@ if plot ==True:
         k = k + 1
     
     # Labels and such
-    ax.set_ylabel('Displacement m')
+    ax.set_ylabel('Normalized Displacement m')
     ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
     ax.legend()
     tfmt = mdates.DateFormatter('%H:%M:%S')

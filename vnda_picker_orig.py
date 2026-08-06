@@ -51,7 +51,7 @@ try:
         station='VNDA',
         network='*',
         location='*',
-        channel='BHZ',
+        channel='BH*',
         starttime=date1,
         endtime=date2,
         attach_response=True
@@ -97,8 +97,7 @@ triggers = trigger_onset(cft, trigger_on, trigger_off)
 
 
 trig_times = []
-onset_times = []
-peak_amps = []
+#peak_amps = []
 sliced_wvf = []
 
 for trigger in triggers:
@@ -111,9 +110,9 @@ for trigger in triggers:
         #Filtering by max amplitude. 
         max_amp = max(abs(sliced.data))
         #print(max_amp)
-        if max_amp>1E-9:
-            trig_times.append([onset, offset])
-            peak_amps.append(max_amp)
+        if max_amp>1E-9: # nm
+            trig_times.append([onset, offset]) 
+            #peak_amps.append(max_amp)
             
             #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
             slc = st[0].slice(onset-5,offset+20)
@@ -122,9 +121,7 @@ for trigger in triggers:
             
             #if max_amp > 1.4E-8:
                 #print(f'Thats a big one!')
-        else: 
-            #print(f'max amp too small, {max_amp}')
-            pass
+
 # Plot the results ------------------------------
 plot = False
 if plot ==True:
@@ -160,17 +157,4 @@ if plot ==True:
     # Title
     ax.title.set_text('VNDA Signals')
     plt.show()
-
-    
-    
-
-
-# Save results to text file
-#s1 = date1.strftime('%Y-%M-%dT%H-%m')
-#s2 = date2.strftime('%Y-%M-%dT%H-%m')
-#nme = 'onset_times' + '_' + s1 + '_' + s2 + '.txt'
-#with open(nme, "w") as file:
-    #for time in trig_times:
-        #file.write(str(time) + "\n")
-
 

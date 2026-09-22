@@ -26,6 +26,11 @@ def create_parser():
         type=str,
         help="Generate plot starting at this time [YYYY-MM-DDTHH:MM:SS]",
     )
+    parser.add_argument(
+        "--plot",
+        action="store_true",
+        help="Generate plot ",
+    )
 
     return parser
 
@@ -39,7 +44,7 @@ args = create_parser().parse_args()
 
 date1 = UTCDateTime(args.date1)
 date2 = UTCDateTime(args.date2)
-
+plot = args.plot
 # Attach to client
 #client = Client(base_url='http://10.30.5.28:8080', debug=True, user='ken', password='grayling')
 
@@ -51,7 +56,7 @@ try:
         station='VNDA',
         network='*',
         location='*',
-        channel='BH*',
+        channel='BHZ',
         starttime=date1,
         endtime=date2,
         attach_response=True
@@ -115,7 +120,7 @@ for trigger in triggers:
             #peak_amps.append(max_amp)
             
             #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
-            slc = st[0].slice(onset-5,offset+20)
+            slc = st[0].slice(onset-0.5, offset+1)
             #slc = slc.normalize()
             sliced_wvf.append(slc)
             
@@ -123,8 +128,8 @@ for trigger in triggers:
                 #print(f'Thats a big one!')
 
 # Plot the results ------------------------------
-plot = False
-if plot ==True:
+
+if plot==True:
     fig, ax = plt.subplots(1)
     
     # Plot the waveform

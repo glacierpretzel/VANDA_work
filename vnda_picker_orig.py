@@ -33,133 +33,143 @@ def create_parser():
     )
 
     return parser
+    
+def picker(date1,date2, plot):
+    #----------------------------------------------------
+    # Picker thresholds - these will need to be tweaked:
+    trigger_on = 4.5
+    trigger_off = 1.0
+    #----------------------------------------------------
+    
+    
+    # Attach to client
+    #client = Client(base_url='http://10.30.5.28:8080', debug=True, user='ken', password='grayling')
+    
+    client2 = Client('IRIS')
+    
+    # Get data
+    try:
+        st = client2.get_waveforms(
+            station='VNDA',
+            network='*',
+            location='*',
+            channel='BHZ',
+            starttime=date1,
+            endtime=date2,
+            attach_response=True
+        )
+    except:
+        print("Unable to get data!")
+        sys.exit()
+    
+    # Preprocessing
+    sr = st[0].stats.sampling_rate
+    
+    pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
+    st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=False)
+    st.merge(fill_value = 'interpolate')
+    
+    st.detrend(type="linear")
+    st.detrend(type="demean")
+    a = st.copy()
+    #st.normalize()
+    #st[0].taper(0.01)
+    st.filter("bandpass", freqmin=2, freqmax=8)
+    
+    # Set-up triggers
+    sr = st[0].stats.sampling_rate
+    
+    # Define STA and LTA window lengths (in samples)
+    nsta = int(0.5 * sr)  # Short-term window: 0.5 seconds
+    nlta = int(3 * sr)    # Long-term window: 3 seconds
+    
+    # Calculate the STA/LTA characteristic function
+    cft = classic_sta_lta(st[0].data, nsta, nlta)
+    
+    # Identify trigger onsets and offsets as sample indices
+    
+    triggers = trigger_onset(cft, trigger_on, trigger_off)
+    
+    #try:
+        # Find events
+        #cat = client.get_events(starttime = date1, endtime = date2,  minmagnitude = 5, maxmagnitude = 9) #I don't think this is actually working. 
+    #except:
+        #print('No earthquakes for this time period.')
+        #cat = 0
+    
+    
+    trig_times = []
+    peak_amps = []
+    sliced_wvf = []
+    
+    for trigger in triggers:
+        onset = st[0].stats.starttime + trigger[0] / sr
+        offset = st[0].stats.starttime + trigger[1] / sr
+        #slicing the waveform on the onset and offset trigger times. This will be useful for template matching. 
+        sliced = st[0].slice(onset,offset)
+        
+        if len(sliced)>0:
+            #Filtering by max amplitude. 
+            max_amp = max(abs(sliced.data))
+            #print(max_amp)
+            if max_amp>1E-9: # nm
+                trig_times.append([onset, offset]) 
+                peak_amps.append(max_amp)
+                
+                #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
+                slc = st[0].slice(onset-1.5, offset+1)
+                #slc = slc.normalize()
+                sliced_wvf.append(slc)
+                
+                #if max_amp > 1.4E-8:
+                    #print(f'Thats a big one!')
+    #trig_times.write(f'trig_times_{st[0].stats.starttime}.csv', )
+    # Plot the results ------------------------------
 
-#----------------------------------------------------
-# Picker thresholds - these will need to be tweaked:
-trigger_on = 4.5
-trigger_off = 1.0
-#----------------------------------------------------
-
+    if plot==True:
+        fig, ax = plt.subplots(1)
+        
+        # Plot the waveform
+        st[0].taper(0.01)
+        start = st[0].stats.starttime
+        #time = np.range(start, start+60*60, len(st[0].data))
+        ax.plot(st[0].times("matplotlib"), st[0].data, "k-", label = st[0].stats.channel)
+        
+        # Plot the triggers
+        k = 0
+        for t in trig_times:
+            t1 = mdates.date2num(t[0].datetime)
+            t2 = mdates.date2num(t[1].datetime)
+            if k == 0:
+                ax.axvspan(t1, t2, color="red", alpha=0.3, label="Trigger")
+            else:
+                ax.axvspan(t1, t2, color="red", alpha=0.3)
+            k = k + 1
+        
+        # Labels and such
+        ax.set_ylabel('Normalized Displacement m')
+        ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
+        ax.legend()
+        tfmt = mdates.DateFormatter('%H:%M:%S')
+        fig.autofmt_xdate(rotation=45)
+        ax.xaxis.set_major_formatter(tfmt)
+        ax.xaxis_date()
+        # Turn on a grids
+        ax.grid(True, 'both')     
+        # Title
+        ax.title.set_text('VNDA Signals')
+        plt.show()
+        
+    return st, trig_times, peak_amps, sliced_wvf
+    
 args = create_parser().parse_args()
 
 date1 = UTCDateTime(args.date1)
 date2 = UTCDateTime(args.date2)
 plot = args.plot
-# Attach to client
-#client = Client(base_url='http://10.30.5.28:8080', debug=True, user='ken', password='grayling')
 
-client2 = Client('IRIS')
-
-# Get data
-try:
-    st = client2.get_waveforms(
-        station='VNDA',
-        network='*',
-        location='*',
-        channel='BHZ',
-        starttime=date1,
-        endtime=date2,
-        attach_response=True
-    )
-except:
-    print("Unable to get data!")
-    sys.exit()
-
-# Preprocessing
-sr = st[0].stats.sampling_rate
-
-pre_filt = [0.001, 0.005, sr / 2 - 2, sr / 2]
-st.remove_response(output = 'DISP', pre_filt = pre_filt, taper=False)
-st.merge(fill_value = 'interpolate')
-
-st.detrend(type="linear")
-st.detrend(type="demean")
-a = st.copy()
-#st.normalize()
-#st[0].taper(0.01)
-st.filter("bandpass", freqmin=2, freqmax=8)
-
-# Set-up triggers
-sr = st[0].stats.sampling_rate
-
-# Define STA and LTA window lengths (in samples)
-nsta = int(0.5 * sr)  # Short-term window: 0.5 seconds
-nlta = int(3 * sr)    # Long-term window: 3 seconds
-
-# Calculate the STA/LTA characteristic function
-cft = classic_sta_lta(st[0].data, nsta, nlta)
-
-# Identify trigger onsets and offsets as sample indices
-
-triggers = trigger_onset(cft, trigger_on, trigger_off)
-
-#try:
-    # Find events
-    #cat = client.get_events(starttime = date1, endtime = date2,  minmagnitude = 5, maxmagnitude = 9) #I don't think this is actually working. 
-#except:
-    #print('No earthquakes for this time period.')
-    #cat = 0
+#st, trig_times, peak_amps, sliced_wvf = picker(date1, date2)
 
 
-trig_times = []
-#peak_amps = []
-sliced_wvf = []
 
-for trigger in triggers:
-    onset = st[0].stats.starttime + trigger[0] / sr
-    offset = st[0].stats.starttime + trigger[1] / sr
-    #slicing the waveform on the onset and offset trigger times. This will be useful for template matching. 
-    sliced = st[0].slice(onset,offset)
-    
-    if len(sliced)>0:
-        #Filtering by max amplitude. 
-        max_amp = max(abs(sliced.data))
-        #print(max_amp)
-        if max_amp>1E-9: # nm
-            trig_times.append([onset, offset]) 
-            #peak_amps.append(max_amp)
-            
-            #Making first waveform slightly shorter than the rest of them so I can manually make families for template matching
-            slc = st[0].slice(onset-0.5, offset+1)
-            #slc = slc.normalize()
-            sliced_wvf.append(slc)
-            
-            #if max_amp > 1.4E-8:
-                #print(f'Thats a big one!')
-
-# Plot the results ------------------------------
-
-if plot==True:
-    fig, ax = plt.subplots(1)
-    
-    # Plot the waveform
-    st[0].taper(0.01)
-    start = st[0].stats.starttime
-    #time = np.range(start, start+60*60, len(st[0].data))
-    ax.plot(st[0].times("matplotlib"), st[0].data, "k-", label = st[0].stats.channel)
-    
-    # Plot the triggers
-    k = 0
-    for t in trig_times:
-        t1 = mdates.date2num(t[0].datetime)
-        t2 = mdates.date2num(t[1].datetime)
-        if k == 0:
-            ax.axvspan(t1, t2, color="red", alpha=0.3, label="Trigger")
-        else:
-            ax.axvspan(t1, t2, color="red", alpha=0.3)
-        k = k + 1
-    
-    # Labels and such
-    ax.set_ylabel('Normalized Displacement m')
-    ax.set_xlabel('%s [UTC]' % st[0].stats.starttime.strftime('%Y-%m-%d'))
-    ax.legend()
-    tfmt = mdates.DateFormatter('%H:%M:%S')
-    fig.autofmt_xdate(rotation=45)
-    ax.xaxis.set_major_formatter(tfmt)
-    ax.xaxis_date()
-    # Turn on a grids
-    ax.grid(True, 'both')     
-    # Title
-    ax.title.set_text('VNDA Signals')
-    plt.show()
 
